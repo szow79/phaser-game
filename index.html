@@ -1,67 +1,149 @@
-<!DOCTYPE HTML>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-	<title>Phaser Full Screen Mobile Example</title>
-	<meta charset="utf-8">
-	<meta http-equiv="X-UA-Compatible" content="chrome=1, IE=9">
-	<meta name="format-detection" content="telephone=no">
-	<meta name="HandheldFriendly" content="true" />
-	<meta name="robots" content="noindex,nofollow" />
-	<meta name="apple-mobile-web-app-capable" content="yes" />
-	<meta name="apple-mobile-web-app-status-bar-style" content="black" />
-	<meta name="apple-mobile-web-app-title" content="Phaser App">
-	<meta name="viewport" content="initial-scale=1 maximum-scale=1 user-scalable=0 minimal-ui" />
-	<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-	<!-- non-retina iPhone pre iOS 7 -->
-	<link rel="apple-touch-icon" sizes="57x57" href="icons/app_icon_57x57.png">
-	<link rel="apple-touch-icon" sizes="60x60" href="icons/app_icon_60x60.png">
-	<!-- non-retina iPad pre iOS 7 -->
-	<link rel="apple-touch-icon" sizes="72x72" href="icons/app_icon_72x72.png">
-	<!-- non-retina iPad iOS 7 -->
-	<link rel="apple-touch-icon" sizes="76x76" href="icons/app_icon_76x76.png">
-	<!-- retina iPhone pre iOS 7 -->
-	<link rel="apple-touch-icon" sizes="114x114" href="icons/app_icon_114x114.png">
-	<!-- retina iPhone iOS 7 -->
-	<link rel="apple-touch-icon" sizes="120x120" href="icons/app_icon_120x120.png">
-	<!-- retina iPad pre iOS 7 -->
-	<link rel="apple-touch-icon" sizes="144x144" href="icons/app_icon_144x144.png">
-	<!-- retina iPad iOS 7 -->
-	<link rel="apple-touch-icon" sizes="152x152" href="icons/app_icon_152x152.png">
-	<link rel="apple-touch-icon" sizes="256x256" href="icons/app_icon_256x256.png">
-	<link rel="apple-touch-icon" sizes="512x512" href="icons/app_icon_512x512.png">
-	<link rel="apple-touch-icon" sizes="1024x1024" href="icons/app_icon_1024x1024.png">
-	<link rel="stylesheet" href="css/stylesheet.css" type="text/css" charset="utf-8" />
-	<script src="js/phaser.min.js"></script>
-	<script src="src/Boot.js"></script>
-	<script src="src/Preloader.js"></script>
-	<script src="src/MainMenu.js"></script>
-	<script src="src/Game.js"></script>
+  <meta charset="UTF-8" />
+  <title>Cat game</title>
+  <script type="text/javascript" src="js/phaser.min.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
 </head>
 <body>
 
-	<div id="game"></div>
-	<div id="orientation"></div>
-
 <script type="text/javascript">
 
-(function () {
+  var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
 
-	//	Create your Phaser game and inject it into the game div.
-	//	We did it in a window.onload event, but you can do it anywhere (requireJS load, anonymous function, jQuery dom ready, - whatever floats your boat)
-	//	We're using a game size of 1024 x 768 here, but you can use whatever you feel makes sense for your game of course.
-	var game = new Phaser.Game(1024, 768, Phaser.AUTO, 'game');
+  function preload() {
+    game.load.image('sky', 'assets/sky.png');
+    game.load.image('ground', 'assets/ground tile.png');
+    game.load.image('star', 'assets/spike.png');
+    game.load.spritesheet('cat', 'assets/cat.png', 50, 50);
+  }
 
-	//	Add the States your game has.
-	//	You don't have to do this in the html, it could be done in your Boot state too, but for simplicity I'll keep it here.
-	game.state.add('Boot', BasicGame.Boot);
-	game.state.add('Preloader', BasicGame.Preloader);
-	game.state.add('MainMenu', BasicGame.MainMenu);
-	game.state.add('Game', BasicGame.Game);
+  var platforms;
 
-	//	Now start the Boot state.
-	game.state.start('Boot');
 
-})();
+  function create() {
+    //  We're going to be using physics, so enable the Arcade Physics system
+    game.physics.startSystem(Phaser.Physics.ARCADE);
+
+    //  A simple background for our game
+    game.add.sprite(0, 0, 'sky');
+
+    //  The platforms group contains the ground and the 2 ledges we can jump on
+    platforms = game.add.group();
+
+    //  We will enable physics for any object that is created in this group
+    platforms.enableBody = true;
+
+    // Here we create the ground.
+    var ground = platforms.create(0, game.world.height - 64, 'ground');
+
+    //  Scale it to fit the width of the game (the original sprite is 400x32 in size)
+    ground.scale.setTo(4, .5);
+
+    //  This stops it from falling away when you jump on it
+    ground.body.immovable = true;
+
+    //  Now let's create two ledges
+    var ledge = platforms.create(400, 400, 'ground');
+
+    ledge.scale.setTo(.6, .3);
+
+    ledge.body.immovable = true;
+
+    ledge = platforms.create(-150, 250, 'ground');
+
+    ledge.scale.setTo(1, .3);
+
+    ledge.body.immovable = true;
+
+    // ---------------------
+
+    player = game.add.sprite(32, game.world.height - 150, 'cat');
+
+    game.physics.arcade.enable(player);
+
+    player.body.bounce.y = 0.2;
+    player.body.gravity.y = 300;
+    player.body.collideWorldBounds = true;
+
+    player.animations.add('right', [3,4,5,6,7], 10, true);
+    player.animations.add('left', [7,6,5,4,3], 10, true);
+    player.animations.add('idle', [5,6], 10, true);
+
+
+    // -----------------------
+
+    stars = game.add.group();
+
+    stars.enableBody = true;
+
+    //  Here we'll create 12 of them evenly spaced apart
+    for (var i = 0; i < 12; i++)
+    {
+        //  Create a star inside of the 'stars' group
+        var star = stars.create(i * 70, 0, 'star');
+        star.scale.setTo(.1,.1);
+
+        //  Let gravity do its thing
+        star.body.gravity.y = 100;
+
+        //  This just gives each star a slightly random bounce value
+        star.body.bounce.y = 0.7 + Math.random() * 0.2;
+    }
+
+  }
+
+  function update() {
+
+    cursors = game.input.keyboard.createCursorKeys();
+
+    game.physics.arcade.collide(player, platforms);
+
+    //  Reset the players velocity (movement)
+    player.body.velocity.x = 0;
+
+    if (cursors.left.isDown)
+    {
+        //  Move to the left
+        player.body.velocity.x = -150;
+
+        player.animations.play('left');
+    }
+    else if (cursors.right.isDown)
+    {
+        //  Move to the right
+        player.body.velocity.x = 150;
+
+        player.animations.play('right');
+    }
+    else
+    {
+        //  Stand still
+        // player.animations.stop();
+
+        player.animations.play('idle');
+    }
+
+    //  Allow the player to jump if they are touching the ground.
+    if (cursors.up.isDown && player.body.touching.down)
+    {
+        player.body.velocity.y = -350;
+    }
+
+    game.physics.arcade.collide(stars, platforms);
+
+    game.physics.arcade.overlap(player, stars, collectStars, null, this);
+
+    function collectStars (player, star) {
+      star.kill();
+    }
+  }
+
 </script>
 
 </body>
